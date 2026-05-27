@@ -1,0 +1,14 @@
+artifact_uri: file:///Users/pandhari/Desktop/RiskLens/mlruns/190761515294914158/a7ef29dd08f34556abf65ee82f881784/artifacts
+end_time: 1779871994599
+entry_point_name: ''
+experiment_id: '190761515294914158'
+lifecycle_stage: active
+run_id: a7ef29dd08f34556abf65ee82f881784
+run_name: cost_optimized_threshold
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1779871994580
+status: 3
+tags: []
+user_id: pandhari
