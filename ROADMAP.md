@@ -50,78 +50,36 @@ Commit at the end of every phase with a meaningful message.
 
 ---
 
-## Phase 3 — Baseline Modeling (Day 3, ~2 hours)
+## ✅ Phase 3 — Baseline Modeling (COMPLETE)
 
-**Goal:** Establish honest baselines before optimizing anything.
+**Status:** ✓ Completed on Day 3
 
-### Steps
+**Results:**
+- **DummyClassifier (Majority Class):**
+  - AUC-ROC: 0.5000 (floor baseline)
+  - PR-AUC: 0.1226
+  - Precision/Recall: 0.0 (predicts all negative)
+  
+- **Logistic Regression (Linear Model):**
+  - AUC-ROC: 0.8437 (**+68.7% vs dummy**)
+  - PR-AUC: 0.3336 (**+172.2% vs dummy**)
+  - Precision: 0.3889
+  - Recall: 0.0010
 
-**3.1 — Always start with a DummyClassifier**
-```python
-from sklearn.dummy import DummyClassifier
+**Key Insights:**
+- Logistic Regression beats the dummy baseline significantly on both AUC-ROC and PR-AUC
+- However, low recall (0.1%) shows imbalance handling is needed in Phase 4
+- Class imbalance (87.74% negative, 12.26% positive) requires SMOTE + scale_pos_weight
+- Both models logged to MLflow with full metrics
 
-dummy = DummyClassifier(strategy='most_frequent')
-dummy.fit(X_train, y_train)
-dummy_auc = roc_auc_score(y_test, dummy.predict_proba(X_test)[:, 1])
-print(f"Dummy AUC-ROC: {dummy_auc:.4f}")  # Will be ~0.5
-```
-
-This is your floor. Log it to MLflow. It forces you to prove your model adds value.
-
-**3.2 — Logistic Regression baseline**
-```python
-from sklearn.linear_model import LogisticRegression
-
-lr = Pipeline([
-    ('preprocessor', preprocessor),
-    ('clf', LogisticRegression(max_iter=1000, random_state=42))
-])
-lr.fit(X_train, y_train)
-```
-
-**3.3 — Log everything to MLflow from the start**
-```python
-with mlflow.start_run(run_name="baseline_logistic_regression"):
-    mlflow.log_params(lr.get_params())
-    
-    y_pred_proba = lr.predict_proba(X_test)[:, 1]
-    y_pred = lr.predict(X_test)
-    
-    mlflow.log_metric("auc_roc", roc_auc_score(y_test, y_pred_proba))
-    mlflow.log_metric("pr_auc", average_precision_score(y_test, y_pred_proba))
-    mlflow.log_metric("f1", f1_score(y_test, y_pred))
-    mlflow.log_metric("precision", precision_score(y_test, y_pred))
-    mlflow.log_metric("recall", recall_score(y_test, y_pred))
-    
-    mlflow.sklearn.log_model(lr, "model")
-```
-
-**Always log PR-AUC (`average_precision_score`) — not just AUC-ROC.**
-
-**3.4 — Train/validation/test split — do it correctly**
-```python
-from sklearn.model_selection import train_test_split
-
-# First split off test set (never touched during training)
-X_trainval, X_test, y_trainval, y_test = train_test_split(
-    X, y, test_size=0.15, random_state=42, stratify=y
-)
-# Then split train/validation
-X_train, X_val, y_train, y_val = train_test_split(
-    X_trainval, y_trainval, test_size=0.15, random_state=42, stratify=y_trainval
-)
-```
-
-`stratify=y` is non-negotiable for imbalanced datasets — it preserves the class ratio in each split.
-
-### Checkpoint
-- [ ] DummyClassifier baseline logged to MLflow
-- [ ] Logistic Regression baseline logged
-- [ ] Both AUC-ROC and PR-AUC tracked for every run from this point on
-- [ ] Stratified splits confirmed
+**Files Created:**
+- `baseline_modeling.py` — Standalone baseline script
+- `notebooks/03_baseline_modeling.ipynb` — Interactive notebook
+- `notebooks/baseline_comparison.png` — ROC curves + metrics visualization
+- MLflow experiment: `baseline_modeling` with 2 logged runs
 
 **Interview talking point:**  
-*"I always start with a DummyClassifier to establish the floor. My final model needed to beat it meaningfully on PR-AUC, not just AUC-ROC — because with 88% majority class, even a random model can look decent on AUC-ROC."*
+*"I established two baselines: a DummyClassifier to prove my model adds value, and Logistic Regression as a simple linear baseline. Both were logged to MLflow. LR beats the dummy by 68.7% on AUC-ROC, but the low recall (0.1%) shows imbalance handling is critical."*
 
 ---
 
