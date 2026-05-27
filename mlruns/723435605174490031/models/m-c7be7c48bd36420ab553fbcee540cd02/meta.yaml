@@ -1,0 +1,10 @@
+artifact_location: file:///Users/pandhari/Desktop/RiskLens/mlruns/723435605174490031/models/m-c7be7c48bd36420ab553fbcee540cd02/artifacts
+creation_timestamp: 1779871792587
+experiment_id: '723435605174490031'
+last_updated_timestamp: 1779871795681
+model_id: m-c7be7c48bd36420ab553fbcee540cd02
+model_type: null
+name: calibrated_model
+source_run_id: 6bdc82ecccec4f6896ec78645d1dad86
+status: 2
+status_message: null

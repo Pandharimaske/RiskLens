@@ -1,0 +1,14 @@
+artifact_uri: file:///Users/pandhari/Desktop/RiskLens/mlruns/723435605174490031/6bdc82ecccec4f6896ec78645d1dad86/artifacts
+end_time: 1779871795683
+entry_point_name: ''
+experiment_id: '723435605174490031'
+lifecycle_stage: active
+run_id: 6bdc82ecccec4f6896ec78645d1dad86
+run_name: lgb_calibrated
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1779871792566
+status: 3
+tags: []
+user_id: pandhari
