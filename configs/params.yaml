@@ -1,0 +1,60 @@
+# RiskLens: Configuration & Hyperparameters
+
+# MLflow Configuration
+mlflow:
+  tracking_uri: "https://dagshub.com/YOUR_USERNAME/risklens.mlflow"
+  experiment_name: "insurance-claim-prediction"
+
+# Model Configuration
+model:
+  type: "xgboost"
+  optimal_threshold: 0.5  # Will be optimized in Phase 7
+  calibration_method: "isotonic"
+  imbalance_strategy: "smote"
+  random_state: 42
+
+# XGBoost Hyperparameters
+xgboost:
+  n_estimators: 100
+  max_depth: 6
+  learning_rate: 0.1
+  subsample: 0.8
+  colsample_bytree: 0.8
+  reg_alpha: 0.0
+  reg_lambda: 1.0
+  scale_pos_weight: 1.0  # Will be calculated from class imbalance
+
+# LightGBM Hyperparameters
+lightgbm:
+  n_estimators: 100
+  num_leaves: 31
+  learning_rate: 0.1
+  min_child_samples: 20
+  feature_fraction: 0.8
+  bagging_fraction: 0.8
+  lambda_l1: 0.0
+  lambda_l2: 1.0
+
+# SMOTE Configuration
+smote:
+  k_neighbors: 5
+  random_state: 42
+
+# Train/Test Split
+data_split:
+  test_size: 0.15
+  validation_size: 0.15
+  random_state: 42
+  stratify: true
+
+# Cost Matrix for Threshold Optimization
+cost_matrix:
+  false_negative_cost: 50000  # Cost of missed high-risk claim (INR)
+  false_positive_cost: 3000   # Cost of incorrectly declining good customer (INR)
+  true_negative_cost: 0       # Correct rejection
+  true_positive_cost: -10000  # Benefit of avoiding surprise claim
+
+# Monitoring
+monitoring:
+  drift_detection_threshold: 0.3
+  retraining_required_threshold: 0.5
