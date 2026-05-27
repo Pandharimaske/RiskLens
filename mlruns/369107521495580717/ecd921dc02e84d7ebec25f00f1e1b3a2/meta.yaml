@@ -1,0 +1,14 @@
+artifact_uri: file:///Users/pandhari/Desktop/RiskLens/mlruns/369107521495580717/ecd921dc02e84d7ebec25f00f1e1b3a2/artifacts
+end_time: 1779900395940
+entry_point_name: ''
+experiment_id: '369107521495580717'
+lifecycle_stage: active
+run_id: ecd921dc02e84d7ebec25f00f1e1b3a2
+run_name: incongruous-kit-42
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1779900390012
+status: 4
+tags: []
+user_id: pandhari

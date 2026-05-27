@@ -1,0 +1,14 @@
+artifact_uri: file:///Users/pandhari/Desktop/RiskLens/mlruns/369107521495580717/bfdd486617184dfc870c14c51c8f03ad/artifacts
+end_time: 1779900453215
+entry_point_name: ''
+experiment_id: '369107521495580717'
+lifecycle_stage: active
+run_id: bfdd486617184dfc870c14c51c8f03ad
+run_name: clean-penguin-78
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1779900448564
+status: 3
+tags: []
+user_id: pandhari

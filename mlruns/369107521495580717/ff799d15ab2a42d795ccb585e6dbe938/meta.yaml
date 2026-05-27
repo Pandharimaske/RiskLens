@@ -1,0 +1,14 @@
+artifact_uri: file:///Users/pandhari/Desktop/RiskLens/mlruns/369107521495580717/ff799d15ab2a42d795ccb585e6dbe938/artifacts
+end_time: 1779900273462
+entry_point_name: ''
+experiment_id: '369107521495580717'
+lifecycle_stage: active
+run_id: ff799d15ab2a42d795ccb585e6dbe938
+run_name: omniscient-ox-291
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1779900238993
+status: 4
+tags: []
+user_id: pandhari

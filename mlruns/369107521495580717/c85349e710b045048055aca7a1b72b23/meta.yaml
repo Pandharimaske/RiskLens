@@ -1,0 +1,14 @@
+artifact_uri: file:///Users/pandhari/Desktop/RiskLens/mlruns/369107521495580717/c85349e710b045048055aca7a1b72b23/artifacts
+end_time: 1779900202820
+entry_point_name: ''
+experiment_id: '369107521495580717'
+lifecycle_stage: active
+run_id: c85349e710b045048055aca7a1b72b23
+run_name: adaptable-dove-306
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1779900202714
+status: 4
+tags: []
+user_id: pandhari

@@ -1,0 +1,16 @@
+rank,feature,permutation_importance
+1,Premium_Bucket,0.0
+2,Vehicle_Age_Numeric,0.0
+3,Driving_License,0.0
+4,Region_Code,0.0
+5,Previously_Insured,0.0
+6,Annual_Premium,0.0
+7,Policy_Sales_Channel,0.0
+8,Vintage,0.0
+9,Premium_per_Vehicle_Year,0.0
+10,Customer_Tenure_Segment,0.0
+11,High_Value_Vehicle,0.0
+12,Damage_History_Risk,0.0
+13,Gender,0.0
+14,Vehicle_Age,0.0
+15,Vehicle_Damage,0.0

@@ -1,0 +1,14 @@
+artifact_uri: file:///Users/pandhari/Desktop/RiskLens/mlruns/369107521495580717/c5ee88f1a91941ee9cd79e4574840764/artifacts
+end_time: 1779900139212
+entry_point_name: ''
+experiment_id: '369107521495580717'
+lifecycle_stage: active
+run_id: c5ee88f1a91941ee9cd79e4574840764
+run_name: legendary-asp-485
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1779900139084
+status: 4
+tags: []
+user_id: pandhari
