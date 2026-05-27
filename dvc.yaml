@@ -1,0 +1,64 @@
+stages:
+  data_loading:
+    cmd: python scripts/00_load_data.py
+    deps:
+    - data/raw/vehicle_insurance_data.csv
+    outs:
+    - data/processed/X_train.npy
+    - data/processed/y_train.npy
+    - data/processed/X_val.npy
+    - data/processed/y_val.npy
+    - data/processed/X_test.npy
+    - data/processed/y_test.npy
+    params:
+    - params.yaml:data
+  feature_engineering:
+    cmd: python scripts/01_feature_engineering.py
+    deps:
+    - data/processed/X_train.npy
+    - data/processed/y_train.npy
+    - data/processed/X_val.npy
+    - data/processed/X_test.npy
+    - scripts/01_feature_engineering.py
+    outs:
+    - artifacts/preprocessor.pkl
+    - artifacts/feature_names.pkl
+    params:
+    - params.yaml:preprocessing
+  model_training:
+    cmd: python scripts/02_train_model.py
+    deps:
+    - data/processed/X_train.npy
+    - data/processed/y_train.npy
+    - data/processed/X_val.npy
+    - data/processed/y_val.npy
+    - artifacts/preprocessor.pkl
+    - scripts/02_train_model.py
+    outs:
+    - artifacts/base_model.pkl
+    - artifacts/calibrated_model.pkl
+    params:
+    - params.yaml:model
+    - params.yaml:hyperparameters
+    metrics:
+    - metrics/train_metrics.json:
+        cache: false
+  model_evaluation:
+    cmd: python scripts/03_evaluate_model.py
+    deps:
+    - artifacts/calibrated_model.pkl
+    - data/processed/X_test.npy
+    - data/processed/y_test.npy
+    - scripts/03_evaluate_model.py
+    metrics:
+    - metrics/test_metrics.json:
+        cache: false
+    plots:
+    - plots/confusion_matrix.csv:
+        x: actual
+        y: predicted
+        template: confusion
+    - plots/roc_curve.csv:
+        x: fpr
+        y: tpr
+        title: ROC Curve
