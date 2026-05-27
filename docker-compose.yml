@@ -1,35 +1,35 @@
 version: '3.8'
 
 services:
-  api:
-    build:
-      context: .
-      dockerfile: Dockerfile
+  risklens-api:
+    build: .
+    container_name: risklens-api
     ports:
       - "8000:8000"
     environment:
-      - DAGSHUB_TOKEN=${DAGSHUB_TOKEN}
-      - MLFLOW_TRACKING_URI=https://dagshub.com/${DAGSHUB_USERNAME}/risklens.mlflow
+      - HOST=0.0.0.0
+      - PORT=8000
+      - WORKERS=4
+      - LOG_LEVEL=INFO
+      - DECISION_THRESHOLD=0.0400
     volumes:
-      - ./artifacts:/app/artifacts
-      - ./monitoring:/app/monitoring
-      - ./configs:/app/configs
+      - ./artifacts:/app/artifacts:ro
+      - ./logs:/app/logs
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-    restart: unless-stopped
+      start_period: 5s
+    networks:
+      - risklens-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
-  frontend:
-    build:
-      context: .
-      dockerfile: Dockerfile.frontend
-    ports:
-      - "8501:8501"
-    environment:
-      - API_URL=http://api:8000
-    depends_on:
-      api:
-        condition: service_healthy
-    restart: unless-stopped
+networks:
+  risklens-network:
+    driver: bridge
