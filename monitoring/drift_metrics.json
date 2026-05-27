@@ -1,0 +1,156 @@
+{
+  "timestamp": "2026-05-27T22:20:10.022240",
+  "data_drift": {
+    "timestamp": "2026-05-27T22:20:09.539444",
+    "total_features": 17,
+    "features_with_drift": 0,
+    "drift_details": {
+      "Age": {
+        "reference_mean": 6.434903006640061e-17,
+        "reference_std": 1.0,
+        "current_mean": -0.0023957816369081803,
+        "current_std": 0.9988138375938572,
+        "drift_score": 0.0023957816369082445,
+        "has_drift": false
+      },
+      "Driving_License": {
+        "reference_mean": -8.496415807608358e-16,
+        "reference_std": 1.0,
+        "current_mean": 0.003720004531980794,
+        "current_std": 0.9595161889075094,
+        "drift_score": 0.0037200045319816435,
+        "has_drift": false
+      },
+      "Region_Code": {
+        "reference_mean": 5.092522578102564e-17,
+        "reference_std": 1.0,
+        "current_mean": -0.005375519926466922,
+        "current_std": 0.9997246073717625,
+        "drift_score": 0.005375519926466973,
+        "has_drift": false
+      },
+      "Previously_Insured": {
+        "reference_mean": -2.5569151019761827e-18,
+        "reference_std": 0.9999999999999999,
+        "current_mean": 0.004895747779078707,
+        "current_std": 1.0004051223390966,
+        "drift_score": 0.00489574777907871,
+        "has_drift": false
+      },
+      "Annual_Premium": {
+        "reference_mean": -5.753058979446412e-17,
+        "reference_std": 1.0,
+        "current_mean": -0.006415270577299925,
+        "current_std": 0.998695549029641,
+        "drift_score": 0.0064152705772998675,
+        "has_drift": false
+      },
+      "Policy_Sales_Channel": {
+        "reference_mean": 1.0462044292252548e-16,
+        "reference_std": 0.9999999999999998,
+        "current_mean": -0.00310876975845637,
+        "current_std": 1.0020521721649298,
+        "drift_score": 0.0031087697584564755,
+        "has_drift": false
+      },
+      "Vintage": {
+        "reference_mean": -4.3254480475097096e-17,
+        "reference_std": 1.0,
+        "current_mean": -0.003809250392990274,
+        "current_std": 1.0017060085633327,
+        "drift_score": 0.0038092503929902308,
+        "has_drift": false
+      },
+      "Vehicle_Age_Numeric": {
+        "reference_mean": 8.016994225987824e-17,
+        "reference_std": 1.0,
+        "current_mean": -0.00016630992033121457,
+        "current_std": 0.9980027387781005,
+        "drift_score": 0.00016630992033129474,
+        "has_drift": false
+      },
+      "Premium_per_Vehicle_Year": {
+        "reference_mean": 5.753058979446412e-17,
+        "reference_std": 1.0,
+        "current_mean": -0.005181259616886796,
+        "current_std": 1.0071700758896727,
+        "drift_score": 0.005181259616886853,
+        "has_drift": false
+      },
+      "High_Value_Vehicle": {
+        "reference_mean": 2.642145605375389e-17,
+        "reference_std": 1.0,
+        "current_mean": -0.007359723415630888,
+        "current_std": 0.995725953270153,
+        "drift_score": 0.007359723415630914,
+        "has_drift": false
+      },
+      "Damage_History_Risk": {
+        "reference_mean": -6.86105552363609e-17,
+        "reference_std": 1.0,
+        "current_mean": -0.0048551353450656054,
+        "current_std": 0.9997884666536514,
+        "drift_score": 0.004855135345065537,
+        "has_drift": false
+      },
+      "Gender": {
+        "reference_mean": 0.5406203729734795,
+        "reference_std": 0.49834725372926003,
+        "current_mean": 0.5412213339863907,
+        "current_std": 0.4982979044952752,
+        "drift_score": 0.0012059081462053578,
+        "has_drift": false
+      },
+      "Vehicle_Age": {
+        "reference_mean": 0.5166038796738824,
+        "reference_std": 0.577814959084759,
+        "current_mean": 0.5152273164587962,
+        "current_std": 0.5771203814331111,
+        "drift_score": 0.0023823599466284377,
+        "has_drift": false
+      },
+      "Vehicle_Damage": {
+        "reference_mean": 0.5054259207197076,
+        "reference_std": 0.4999705585175426,
+        "current_mean": 0.5035772386166845,
+        "current_std": 0.49998720320012124,
+        "drift_score": 0.003697581930633363,
+        "has_drift": false
+      },
+      "Age_Risk_Bucket": {
+        "reference_mean": 1.778386280573517,
+        "reference_std": 1.2695772339231028,
+        "current_mean": 1.7756397921878007,
+        "current_std": 1.2697913227098176,
+        "drift_score": 0.0021633094169699035,
+        "has_drift": false
+      },
+      "Customer_Tenure_Segment": {
+        "reference_mean": 0.3445525255365008,
+        "reference_std": 0.6025822077164704,
+        "current_mean": 0.34719331082617594,
+        "current_std": 0.6041950356460004,
+        "drift_score": 0.0043824481636830954,
+        "has_drift": false
+      },
+      "Premium_Bucket": {
+        "reference_mean": 1.500399212819792,
+        "reference_std": 1.1186288705502068,
+        "current_mean": 1.500061224132804,
+        "current_std": 1.1146728967866697,
+        "drift_score": 0.0003021455067772802,
+        "has_drift": false
+      }
+    }
+  },
+  "prediction_drift": {
+    "timestamp": "2026-05-27T22:20:10.020649",
+    "positive_class_rate_reference": 0.1225707138733885,
+    "positive_class_rate_predictions": 0.0,
+    "prediction_probability_mean": 0.1225416598655173,
+    "prediction_probability_std": 0.14526992134138775,
+    "prediction_probability_min": 0.006388510739667695,
+    "prediction_probability_max": 0.4937324947109053,
+    "has_prediction_drift": true
+  }
+}
