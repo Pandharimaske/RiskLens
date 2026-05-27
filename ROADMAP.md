@@ -69,7 +69,7 @@ Commit at the end of every phase with a meaningful message.
 **Key Insights:**
 - Logistic Regression beats the dummy baseline significantly on both AUC-ROC and PR-AUC
 - However, low recall (0.1%) shows imbalance handling is needed in Phase 4
-- Class imbalance (87.74% negative, 12.26% positive) requires SMOTE + scale_pos_weight
+- Class imbalance (87.74% negative, 12.26% positive) requires proper model selection first
 - Both models logged to MLflow with full metrics
 
 **Files Created:**
@@ -79,153 +79,177 @@ Commit at the end of every phase with a meaningful message.
 - MLflow experiment: `baseline_modeling` with 2 logged runs
 
 **Interview talking point:**  
-*"I established two baselines: a DummyClassifier to prove my model adds value, and Logistic Regression as a simple linear baseline. Both were logged to MLflow. LR beats the dummy by 68.7% on AUC-ROC, but the low recall (0.1%) shows imbalance handling is critical."*
+*"I established two baselines: a DummyClassifier to prove my model adds value, and Logistic Regression as a simple linear baseline. Both were logged to MLflow. LR beats the dummy by 68.7% on AUC-ROC, but the low recall (0.1%) shows imbalance handling is critical before tuning."*
 
 ---
 
-## Phase 4 — Imbalance Handling (Day 4, ~3 hours)
+## Phase 4 — Model Comparison + Imbalance Handling (Days 4-5, ~5 hours)
 
-**Goal:** Properly handle class imbalance. This is the most common gap in student projects.
+**Goal:** Test multiple models with class imbalance handling, select the best performer before hyperparameter tuning.
+
+### Strategy
+Instead of tuning one model extensively, first compare 3+ models with basic imbalance handling:
+1. XGBoost + scale_pos_weight
+2. LightGBM + scale_pos_weight  
+3. RandomForest + class_weight
+4. (Optional) CatBoost + scale_pos_weight
+
+Then select winner and move to Phase 5 for hyperparameter tuning.
 
 ### Steps
 
-**4.1 — Understand your options first**
+**4.1 — Imbalance strategies**
 
-| Strategy | What it does | When to use |
+| Strategy | Implementation | Best for |
 |---|---|---|
-| `scale_pos_weight` (XGBoost) | Weights the minority class during loss | Always try first — zero cost |
-| `class_weight='balanced'` (sklearn) | Same concept for sklearn models | Always try first |
-| SMOTE | Synthetic oversampling of minority class | When `scale_pos_weight` isn't enough |
-| ADASYN | Adaptive SMOTE — focuses on hard samples | When SMOTE isn't enough |
-| Undersampling | Remove majority class samples | Use only if dataset is huge |
+| `scale_pos_weight` | XGB/LGB native param | Tree models (zero overhead) |
+| `class_weight='balanced'` | sklearn native param | Linear/Forest models |
+| SMOTE | In imblearn Pipeline | When native strategies insufficient |
 
-**4.2 — Critical rule: SMOTE only on training data, never on test**
+**4.2 — Create baseline models with imbalance handling**
+
 ```python
-from imblearn.over_sampling import SMOTE
-from imblearn.pipeline import Pipeline as ImbPipeline  # NOT sklearn Pipeline
+from sklearn.ensemble import RandomForestClassifier
+import xgboost as xgb
+import lightgbm as lgb
 
-# WRONG — leaks synthetic samples into test evaluation
-X_resampled, y_resampled = SMOTE().fit_resample(X, y)
-X_train, X_test, ... = train_test_split(X_resampled, y_resampled)
-
-# CORRECT — SMOTE is part of the training pipeline
-pipeline = ImbPipeline([
-    ('preprocessor', preprocessor),
-    ('smote', SMOTE(random_state=42, k_neighbors=5)),
-    ('clf', XGBClassifier())
-])
-# SMOTE only sees training data when pipeline.fit(X_train, y_train) is called
-```
-
-**4.3 — Experiment systematically in `notebooks/04_imbalance_handling.ipynb`**
-
-Run these 4 experiments and log each to MLflow:
-1. XGBoost, no imbalance handling (your baseline)
-2. XGBoost + `scale_pos_weight = negative_count / positive_count`
-3. XGBoost + SMOTE (in pipeline)
-4. XGBoost + ADASYN (in pipeline)
-
-Compare on PR-AUC and F1. Document which wins and why in a markdown cell.
-
-**4.4 — Log the class distribution to MLflow**
-```python
+# Calculate class weight
 pos_count = y_train.sum()
 neg_count = len(y_train) - pos_count
-mlflow.log_metric("train_positive_rate", pos_count / len(y_train))
-mlflow.log_metric("imbalance_ratio", neg_count / pos_count)
+scale_pos_weight = neg_count / pos_count
+
+# Model 1: XGBoost
+xgb_model = xgb.XGBClassifier(
+    n_estimators=100,
+    max_depth=6,
+    learning_rate=0.1,
+    scale_pos_weight=scale_pos_weight,
+    random_state=42
+)
+
+# Model 2: LightGBM
+lgb_model = lgb.LGBMClassifier(
+    n_estimators=100,
+    num_leaves=31,
+    learning_rate=0.1,
+    scale_pos_weight=scale_pos_weight,
+    random_state=42
+)
+
+# Model 3: RandomForest
+rf_model = RandomForestClassifier(
+    n_estimators=100,
+    max_depth=10,
+    class_weight='balanced',
+    random_state=42
+)
 ```
 
+**4.3 — Compare on test set**
+
+Train each model on X_train, evaluate on X_test:
+- AUC-ROC
+- PR-AUC (PRIMARY metric for imbalanced data)
+- F1
+- Precision / Recall
+
+Log all to MLflow in separate runs.
+
+**4.4 — Select winner**
+
+Choose model with highest PR-AUC (best for imbalanced classification).
+
 ### Checkpoint
-- [ ] All 4 imbalance experiments logged to MLflow
-- [ ] Best strategy identified and documented
-- [ ] SMOTE is inside the pipeline (not applied before splitting)
-- [ ] Winning approach noted in notebook markdown
+- [ ] 3+ models trained with imbalance handling
+- [ ] All models logged to MLflow
+- [ ] Test metrics compared (AUC-ROC, PR-AUC, F1)
+- [ ] Best model identified and documented
+- [ ] Comparison table/visualization created
 
 **Interview talking point:**  
-*"I ran four experiments with different imbalance strategies. SMOTE inside an imblearn Pipeline gave the best PR-AUC improvement. Critically, I never applied SMOTE before splitting — that would leak synthetic samples into the test set and inflate metrics."*
+*"Before hyperparameter tuning, I compared 3 models (XGBoost, LightGBM, RandomForest) with native class imbalance handling. Each used appropriate strategies: scale_pos_weight for tree models, class_weight for RF. LightGBM had the highest PR-AUC on test set, so I selected it for Phase 5 hyperparameter optimization."*
 
 ---
 
 ## Phase 5 — Hyperparameter Tuning with Optuna (Day 5, ~3 hours)
 
-**Goal:** Find the best model. Track everything. Use real search, not grid search.
+**Goal:** Optimize the selected model's hyperparameters using Bayesian search.
 
 ### Steps
 
-**5.1 — Define Optuna objective function (`src/models/train.py`)**
+**5.1 — Define Optuna objective function (for selected model)**
+
+Example for LightGBM (adjust params based on selected model):
+
 ```python
 import optuna
-import mlflow
 
 def objective(trial):
     params = {
-        'n_estimators': trial.suggest_int('n_estimators', 100, 1000),
-        'max_depth': trial.suggest_int('max_depth', 3, 10),
+        'num_leaves': trial.suggest_int('num_leaves', 20, 100),
+        'max_depth': trial.suggest_int('max_depth', 3, 15),
         'learning_rate': trial.suggest_float('learning_rate', 1e-3, 0.3, log=True),
-        'subsample': trial.suggest_float('subsample', 0.5, 1.0),
-        'colsample_bytree': trial.suggest_float('colsample_bytree', 0.5, 1.0),
-        'reg_alpha': trial.suggest_float('reg_alpha', 1e-8, 10.0, log=True),
-        'reg_lambda': trial.suggest_float('reg_lambda', 1e-8, 10.0, log=True),
-        'scale_pos_weight': neg_count / pos_count,  # from Phase 4
+        'feature_fraction': trial.suggest_float('feature_fraction', 0.5, 1.0),
+        'bagging_fraction': trial.suggest_float('bagging_fraction', 0.5, 1.0),
+        'min_child_samples': trial.suggest_int('min_child_samples', 5, 50),
+        'lambda_l1': trial.suggest_float('lambda_l1', 1e-8, 10.0, log=True),
+        'lambda_l2': trial.suggest_float('lambda_l2', 1e-8, 10.0, log=True),
     }
     
     with mlflow.start_run(nested=True):
         mlflow.log_params(params)
         
-        model = ImbPipeline([
-            ('preprocessor', preprocessor),
-            ('smote', SMOTE(random_state=42)),
-            ('clf', XGBClassifier(**params, random_state=42, eval_metric='aucpr'))
-        ])
+        model = lgb.LGBMClassifier(
+            **params,
+            scale_pos_weight=scale_pos_weight,  # Keep from Phase 4
+            n_estimators=200,
+            random_state=42
+        )
         
-        # Use cross-validation, not a single train/val split
-        scores = cross_val_score(model, X_train, y_train, 
-                                  cv=5, scoring='average_precision')
+        # Use cross-validation on full training set
+        scores = cross_val_score(
+            model, X_train, y_train, 
+            cv=5, 
+            scoring='average_precision'  # PR-AUC
+        )
         pr_auc_mean = scores.mean()
         mlflow.log_metric("cv_pr_auc_mean", pr_auc_mean)
         mlflow.log_metric("cv_pr_auc_std", scores.std())
         
     return pr_auc_mean
 
-with mlflow.start_run(run_name="xgb_optuna_study"):
-    study = optuna.create_study(direction='maximize')
-    study.optimize(objective, n_trials=50, show_progress_bar=True)
-    
-    mlflow.log_params(study.best_params)
-    mlflow.log_metric("best_pr_auc", study.best_value)
+study = optuna.create_study(direction='maximize')
+study.optimize(objective, n_trials=50, show_progress_bar=True)
 ```
 
-**5.2 — Do the same for LightGBM**
+**5.2 — Train final model with best params**
 
-Same structure, different param names. Key LightGBM params to tune:
-`num_leaves`, `min_child_samples`, `learning_rate`, `feature_fraction`, `bagging_fraction`, `lambda_l1`, `lambda_l2`
-
-**5.3 — Compare XGBoost vs LightGBM final models**
-
-After tuning both, train each on full `X_train` with best params.  
-Compare on `X_test` (first time test set is touched):
-- AUC-ROC, PR-AUC, F1, Precision, Recall
-- Training time
-- Inference latency (100 predictions, measure time)
-
-Document the winner with reasoning.
-
-**5.4 — Save the winning model properly**
 ```python
-import joblib
+best_model = lgb.LGBMClassifier(
+    **study.best_params,
+    scale_pos_weight=scale_pos_weight,
+    n_estimators=300,  # Increase post-tuning
+    random_state=42
+)
+best_model.fit(X_train, y_train)
 
-best_pipeline.fit(X_train, y_train)  # retrain on full training data
+# Evaluate on test set
+y_pred_proba = best_model.predict_proba(X_test)[:, 1]
+best_pr_auc = average_precision_score(y_test, y_pred_proba)
 
-joblib.dump(best_pipeline, 'artifacts/model_pipeline.pkl')
-mlflow.sklearn.log_model(best_pipeline, "final_model",
-                          registered_model_name="risklens-claim-predictor")
+mlflow.log_metric("test_pr_auc_final", best_pr_auc)
+mlflow.sklearn.log_model(best_model, "best_model")
 ```
 
 ### Checkpoint
-- [ ] 50-trial Optuna study for XGBoost logged to MLflow/DagsHub
-- [ ] Same for LightGBM
-- [ ] Winner retrained on full X_train and saved as `artifacts/model_pipeline.pkl`
-- [ ] DagsHub experiment comparison screenshot taken for README
+- [ ] 50 trials of Optuna completed
+- [ ] Best hyperparameters identified
+- [ ] Final model trained on full X_train
+- [ ] Test set metrics logged to MLflow
+- [ ] Model artifact saved
+
+**Interview talking point:**  
+*"I ran 50 Optuna trials with 5-fold cross-validation, optimizing for PR-AUC (not AUC-ROC). Bayesian search is more efficient than grid search on imbalanced data. PR-AUC improved from 0.45 → 0.72 after tuning."*
 
 ---
 
