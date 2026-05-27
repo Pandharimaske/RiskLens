@@ -26,159 +26,27 @@ Commit at the end of every phase with a meaningful message.
 
 ---
 
-## Phase 1 — Data & EDA (Day 1–2, ~4 hours)
+## ✅ Phase 2 — Feature Engineering (COMPLETE)
 
-**Goal:** Understand the data deeply enough to make informed modeling decisions.  
-Use the [Home Credit Default Risk](https://www.kaggle.com/c/home-credit-default-risk) or  
-[Vehicle Insurance dataset on Kaggle](https://www.kaggle.com/datasets/ifteshanajnin/carinsuranceclaimprediction-classification) — pick one and stick with it.
+**Status:** ✓ Completed on Day 2
 
-### Steps
+**Deliverables:**
+- ✓ 7 domain features created (Vehicle_Age_Numeric, Premium_per_Vehicle_Year, High_Value_Vehicle, Age_Risk_Bucket, Customer_Tenure_Segment, Premium_Bucket, Damage_History_Risk)
+- ✓ Preprocessing pipeline built with StandardScaler + OrdinalEncoder
+- ✓ Stratified train/val/test splits (70%/15%/15%) with class balance maintained
+- ✓ Preprocessor fitted on training data only (prevents data leakage)
+- ✓ Processed data saved: 266,775 train, 57,167 val, 57,167 test samples
+- ✓ 17 features total (11 numeric + 6 categorical) after engineering
+- ✓ Git commit: "feat: Phase 2 - Feature Engineering complete"
 
-**1.1 — Data ingestion script (`src/data/ingestion.py`)**
-```python
-# Downloads or loads raw CSV
-# Saves to data/raw/
-# Tracks with DVC: dvc add data/raw/train.csv
-```
-
-After adding to DVC:
-```bash
-dvc add data/raw/train.csv
-git add data/raw/train.csv.dvc .gitignore
-git commit -m "feat: add raw data via DVC"
-dvc push
-```
-
-**1.2 — EDA notebook (`notebooks/01_eda.ipynb`) — answer these questions:**
-
-1. **Target distribution** — what is the positive class rate?  
-   `df['target'].value_counts(normalize=True)`  
-   → This number (e.g., 8%) becomes your imbalance justification in the interview.
-
-2. **Missing values** — which features have nulls and how many?  
-   Heatmap + percentage table.
-
-3. **Feature distributions** — histograms for all numeric features.  
-   Look for skew, outliers, bimodal distributions.
-
-4. **Correlation analysis** — heatmap.  
-   Note any features correlated >0.9 with each other (multicollinearity candidates).
-
-5. **Target vs each feature** — boxplots for numeric, countplots for categorical.  
-   → This is where you spot which features are actually predictive.
-
-6. **Class imbalance visualization** — pie chart + annotated bar chart.  
-   Save this as `monitoring/reports/class_distribution.png`.
-
-**1.3 — Write down your EDA findings in a markdown cell at the top of the notebook**
-
-Example:
-```
-Key Findings:
-- Target imbalance: 88% no-claim, 12% claim (ratio ~7.3:1)
-- 3 features have >20% missing values: [list them]
-- vehicle_age and annual_premium are the strongest predictors visually
-- policy_sales_channel is high-cardinality categorical (155 unique values)
-```
-
-These findings directly drive your Phase 2 decisions. This is what interviewers want to see — that your decisions were *data-driven*, not random.
-
-### Checkpoint
-- [ ] EDA notebook complete with all 6 analyses
-- [ ] Class imbalance ratio documented
-- [ ] Key findings written up in the notebook
+**Key Files:**
+- `src/features/engineering.py` — Feature engineering & preprocessing module
+- `data/processed/` — 12 processed data files (.npy & .pkl formats)
+- `artifacts/preprocessor.pkl` — Fitted sklearn ColumnTransformer
+- `notebooks/02_feature_engineering.ipynb` — Interactive workflow
 
 **Interview talking point:**  
-*"The dataset had an 88/12 split, so I first established that AUC-ROC alone would be misleading — I tracked PR-AUC and F1 at multiple thresholds throughout."*
-
----
-
-## Phase 2 — Feature Engineering (Day 2–3, ~3 hours)
-
-**Goal:** Create domain-relevant features that improve model performance and demonstrate insurance domain knowledge.
-
-### Steps
-
-**2.1 — Preprocessing pipeline (`src/features/engineering.py`)**
-
-Build a scikit-learn Pipeline (not manual transformations — this matters for deployment):
-```python
-from sklearn.pipeline import Pipeline
-from sklearn.compose import ColumnTransformer
-from sklearn.preprocessing import StandardScaler, OrdinalEncoder
-from sklearn.impute import SimpleImputer
-
-numeric_pipeline = Pipeline([
-    ('imputer', SimpleImputer(strategy='median')),
-    ('scaler', StandardScaler())
-])
-
-categorical_pipeline = Pipeline([
-    ('imputer', SimpleImputer(strategy='most_frequent')),
-    ('encoder', OrdinalEncoder(handle_unknown='use_encoded_value', unknown_value=-1))
-])
-
-preprocessor = ColumnTransformer([
-    ('num', numeric_pipeline, numeric_features),
-    ('cat', categorical_pipeline, categorical_features)
-])
-```
-
-**Why Pipeline matters:** When you save and load your model, the preprocessor is bundled with it. Your FastAPI endpoint receives raw input and the pipeline handles transformation internally. No preprocessing leakage.
-
-**2.2 — Domain-specific feature engineering (`notebooks/02_feature_engineering.ipynb`)**
-
-Add these features *before* fitting the pipeline:
-```python
-# 1. Vehicle age risk bucket (non-linear relationship with claims)
-df['vehicle_age_bucket'] = pd.cut(df['vehicle_age'], 
-    bins=[0, 1, 3, 7, 15, 100], 
-    labels=['new', 'recent', 'mid', 'old', 'very_old'])
-
-# 2. Premium per year of vehicle age (exposure-adjusted premium)
-df['premium_per_vehicle_year'] = df['annual_premium'] / (df['vehicle_age'] + 1)
-
-# 3. High-value vehicle flag
-df['high_value_flag'] = (df['annual_premium'] > df['annual_premium'].quantile(0.75)).astype(int)
-
-# 4. Prior damage flag (if feature exists — strong signal)
-# df['has_prior_damage'] = (df['vehicle_damage'] == 'Yes').astype(int)
-```
-
-Add/remove based on what's in your actual dataset. The principle is: think like an underwriter.
-
-**2.3 — Validation script (`src/data/validation.py`)**
-
-Use Great Expectations or simple Pydantic-based checks:
-```python
-def validate_dataframe(df: pd.DataFrame) -> dict:
-    issues = []
-    
-    # Schema check
-    required_cols = ['age', 'annual_premium', 'vehicle_age', ...]
-    missing = [c for c in required_cols if c not in df.columns]
-    if missing:
-        issues.append(f"Missing columns: {missing}")
-    
-    # Range checks
-    if df['age'].lt(0).any() or df['age'].gt(120).any():
-        issues.append("age contains out-of-range values")
-    
-    # Null rate check
-    null_rates = df.isnull().mean()
-    high_null = null_rates[null_rates > 0.3].index.tolist()
-    if high_null:
-        issues.append(f"High null rate features: {high_null}")
-    
-    return {"valid": len(issues) == 0, "issues": issues}
-```
-
-This runs before every training pipeline execution. Log the result to MLflow.
-
-### Checkpoint
-- [ ] `preprocessor` pipeline built and saved as `preprocessor.pkl`
-- [ ] At least 2 domain-engineered features added
-- [ ] Validation function runs without errors on your dataset
+*"I built a scikit-learn preprocessing pipeline that bundles with the model for deployment — no leakage, features fit only on training data. Seven domain features engineered from first principles: premium-per-vehicle-year captures exposure, age buckets capture underwriting risk, and damage-history interactions model prior claims behavior."*
 
 ---
 
