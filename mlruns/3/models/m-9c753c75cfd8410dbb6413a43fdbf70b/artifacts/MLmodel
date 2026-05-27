@@ -1,0 +1,23 @@
+artifact_path: /Users/pandhari/Desktop/RiskLens/mlruns/3/models/m-9c753c75cfd8410dbb6413a43fdbf70b/artifacts
+flavors:
+  lightgbm:
+    code: null
+    data: model.pkl
+    lgb_version: 4.6.0
+    model_class: lightgbm.sklearn.LGBMClassifier
+    serialization_format: cloudpickle
+    skops_trusted_types: null
+  python_function:
+    data: model.pkl
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.lightgbm
+    python_version: 3.12.7
+mlflow_version: 3.12.0
+model_id: m-9c753c75cfd8410dbb6413a43fdbf70b
+model_size_bytes: 592200
+model_uuid: m-9c753c75cfd8410dbb6413a43fdbf70b
+prompts: null
+run_id: b53006e10c724592939387921f0f0581
+utc_time_created: '2026-05-27 08:35:52.238316'
