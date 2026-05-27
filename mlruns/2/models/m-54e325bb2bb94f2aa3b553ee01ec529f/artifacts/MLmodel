@@ -1,0 +1,22 @@
+artifact_path: /Users/pandhari/Desktop/RiskLens/mlruns/2/models/m-54e325bb2bb94f2aa3b553ee01ec529f/artifacts
+flavors:
+  python_function:
+    data: model.ubj
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.xgboost
+    python_version: 3.12.7
+  xgboost:
+    code: null
+    data: model.ubj
+    model_class: xgboost.sklearn.XGBClassifier
+    model_format: ubj
+    xgb_version: 3.2.0
+mlflow_version: 3.12.0
+model_id: m-54e325bb2bb94f2aa3b553ee01ec529f
+model_size_bytes: 421177
+model_uuid: m-54e325bb2bb94f2aa3b553ee01ec529f
+prompts: null
+run_id: 1b62f94d7612403c843ec7810dd446ac
+utc_time_created: '2026-05-27 08:21:24.467585'
