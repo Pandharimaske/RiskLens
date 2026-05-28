@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>RiskLens - Insurance Risk Prediction</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <h1>RiskLens - Insurance Risk Prediction</h1>
+    <form id="predict-form">
+      <div class="row">
+        <label>ID<input name="id" value="CUST_001" required></label>
+        <label>Gender
+          <select name="gender">
+            <option>Male</option>
+            <option>Female</option>
+          </select>
+        </label>
+        <label>Age<input type="number" name="age" value="35" min="18" max="120"></label>
+      </div>
+
+      <div class="row">
+        <label>Driving License
+          <select name="driving_license"><option value="1">Yes</option><option value="0">No</option></select>
+        </label>
+        <label>Region Code<input type="number" name="region_code" value="28"></label>
+        <label>Previously Insured<select name="previously_insured"><option value="0">No</option><option value="1">Yes</option></select></label>
+      </div>
+
+      <div class="row">
+        <label>Vehicle Age
+          <select name="vehicle_age"><option>1-2 Year</option><option>&lt; 1 Year</option><option>&gt; 2 Years</option></select>
+        </label>
+        <label>Vehicle Damage
+          <select name="vehicle_damage"><option>No</option><option>Yes</option></select>
+        </label>
+        <label>Annual Premium<input type="number" name="annual_premium" value="40000"></label>
+      </div>
+
+      <div class="row">
+        <label>Policy Sales Channel<input type="number" name="policy_sales_channel" value="26"></label>
+        <label>Vintage (days)<input type="number" name="vintage" value="200"></label>
+      </div>
+
+      <button type="submit">Predict</button>
+    </form>
+
+    <div id="result" class="card hidden"></div>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>

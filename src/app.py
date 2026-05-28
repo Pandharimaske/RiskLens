@@ -21,6 +21,7 @@ import pandas as pd
 import joblib
 from fastapi import FastAPI, HTTPException, File, UploadFile, status
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, validator, ConfigDict
 import uvicorn
 
@@ -195,6 +196,15 @@ app = FastAPI(
     description="REST API for vehicle insurance claim prediction",
     version=API_VERSION,
     lifespan=lifespan
+)
+
+# Enable CORS so a static frontend can call this API from another origin
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # change to specific origins for production
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # ============================================================================

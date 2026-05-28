@@ -1,0 +1,10 @@
+# Render service template for static frontend
+services:
+  - type: web
+    name: risklens-frontend
+    env: docker
+    plan: free
+    dockerfilePath: Dockerfile.frontend
+    buildCommand: ""
+    startCommand: ""
+    envVars: []
