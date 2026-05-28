@@ -1,0 +1,11 @@
+# Render service definition template
+# Update service name, region, and environment variables as needed.
+services:
+  - type: web
+    name: risklens-streamlit
+    env: docker
+    plan: free
+    dockerfilePath: Dockerfile.streamlit
+    buildCommand: ""
+    startCommand: ""
+    envVars: []
