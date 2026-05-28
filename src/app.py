@@ -287,13 +287,20 @@ def prepare_features(data: Dict[str, Any]) -> np.ndarray:
         df = pd.DataFrame([data])
         
         # Apply feature engineering (same as training pipeline)
-        # 1. Vehicle Age as numeric
+        # 1. Vehicle Age as numeric (accept either training-category strings or numeric values)
         vehicle_age_mapping = {
             "< 1 Year": 0.5,
             "1-2 Year": 1.5,
             "> 2 Years": 3
         }
-        df['Vehicle_Age_Numeric'] = df['Vehicle_Age'].map(vehicle_age_mapping)
+        try:
+            if pd.api.types.is_numeric_dtype(df['Vehicle_Age']):
+                df['Vehicle_Age_Numeric'] = df['Vehicle_Age'].astype(float)
+            else:
+                df['Vehicle_Age_Numeric'] = df['Vehicle_Age'].map(vehicle_age_mapping)
+        except Exception:
+            # Fallback: attempt mapping after converting to string
+            df['Vehicle_Age_Numeric'] = df['Vehicle_Age'].astype(str).map(vehicle_age_mapping)
         
         # 2. Premium per vehicle year
         df['Premium_per_Vehicle_Year'] = (
