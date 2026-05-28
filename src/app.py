@@ -78,34 +78,82 @@ def load_model():
             logger.warning(f"Preprocessor compatibility check failed: {exc}")
             # Attempt to rebuild preprocessor from processed training data
             try:
-                logger.info("Attempting to rebuild preprocessor from data/processed/X_train.npy")
-                import numpy as _np
+                logger.info("Attempting to rebuild preprocessor from raw training CSV: data/raw/data.csv")
                 from sklearn.preprocessing import StandardScaler, OneHotEncoder
                 from sklearn.compose import ColumnTransformer
 
-                X_train_path = Path("data/processed/X_train.npy")
-                if X_train_path.exists():
-                    X_train = _np.load(X_train_path)
-                    n_cols = X_train.shape[1]
-                    # Heuristic: first 10 columns numeric, rest categorical (as used in training)
-                    num_feats = list(range(min(10, n_cols)))
-                    cat_feats = list(range(min(10, n_cols), n_cols))
+                raw_path = Path("data/raw/data.csv")
+                if raw_path.exists():
+                    df_raw = pd.read_csv(raw_path)
+
+                    # Reproduce feature engineering used in prepare_features()
+                    df = df_raw.copy()
+                    vehicle_age_mapping = {"< 1 Year": 0.5, "1-2 Year": 1.5, "> 2 Years": 3}
+                    df['Vehicle_Age_Numeric'] = df['Vehicle_Age'].map(vehicle_age_mapping)
+                    df['Premium_per_Vehicle_Year'] = df['Annual_Premium'] / (df['Vehicle_Age_Numeric'] + 1)
+                    df['High_Value_Vehicle'] = (df['Annual_Premium'] > 40000).astype(int)
+
+                    def age_risk_bucket(age):
+                        if age < 25: return 'very_high_risk'
+                        elif age < 35: return 'high_risk'
+                        elif age < 50: return 'medium_risk'
+                        elif age < 65: return 'low_risk'
+                        else: return 'very_low_risk'
+
+                    df['Age_Risk_Bucket'] = df['Age'].apply(age_risk_bucket)
+
+                    def tenure_segment(vintage):
+                        if vintage < 30: return 'new_customer'
+                        elif vintage < 90: return 'growing_customer'
+                        elif vintage < 365: return 'established_customer'
+                        else: return 'loyal_customer'
+
+                    df['Customer_Tenure_Segment'] = df['Vintage'].apply(tenure_segment)
+
+                    def premium_bucket(premium):
+                        if premium < 18000: return 'low_premium'
+                        elif premium < 31000: return 'medium_premium'
+                        elif premium < 40000: return 'high_premium'
+                        else: return 'very_high_premium'
+
+                    df['Premium_Bucket'] = df['Annual_Premium'].apply(premium_bucket)
+                    df['Damage_History_Risk'] = (df['Vehicle_Damage'].map({'Yes':1,'No':0}) * (1 - df['Previously_Insured']))
+
+                    all_features = [
+                        'Gender', 'Age', 'Driving_License', 'Region_Code',
+                        'Previously_Insured', 'Vehicle_Age', 'Vehicle_Damage',
+                        'Annual_Premium', 'Policy_Sales_Channel', 'Vintage',
+                        'Vehicle_Age_Numeric', 'Premium_per_Vehicle_Year',
+                        'High_Value_Vehicle', 'Age_Risk_Bucket', 'Customer_Tenure_Segment',
+                        'Premium_Bucket', 'Damage_History_Risk'
+                    ]
+
+                    df_features = df[all_features].copy()
+
+                    # Define numeric and categorical column names
+                    numeric_cols = [
+                        'Age', 'Driving_License', 'Region_Code', 'Previously_Insured',
+                        'Annual_Premium', 'Policy_Sales_Channel', 'Vintage',
+                        'Vehicle_Age_Numeric', 'Premium_per_Vehicle_Year', 'High_Value_Vehicle', 'Damage_History_Risk'
+                    ]
+                    categorical_cols = [c for c in all_features if c not in numeric_cols]
 
                     new_preprocessor = ColumnTransformer(
                         transformers=[
-                            ('num', StandardScaler(), num_feats),
-                            ('cat', OneHotEncoder(drop='first', sparse_output=False, handle_unknown='ignore'), cat_feats)
-                        ]
+                            ('num', StandardScaler(), numeric_cols),
+                            ('cat', OneHotEncoder(drop='first', sparse_output=False, handle_unknown='ignore'), categorical_cols)
+                        ],
+                        remainder='drop'
                     )
-                    new_preprocessor.fit(X_train)
-                    # Save and replace
+
+                    new_preprocessor.fit(df_features)
                     joblib.dump(new_preprocessor, PREPROCESSOR_PATH)
                     feature_names = list(new_preprocessor.get_feature_names_out())
                     joblib.dump(feature_names, FEATURE_NAMES_PATH)
                     preprocessor = new_preprocessor
-                    logger.info(f"✓ Rebuilt and saved preprocessor and feature names")
+                    logger.info(f"✓ Rebuilt and saved preprocessor and feature names using raw training CSV")
                 else:
-                    logger.error("Processed training data not found; cannot rebuild preprocessor")
+                    logger.error("Raw training CSV not found; cannot rebuild preprocessor")
             except Exception as exc2:
                 logger.exception(f"Failed to rebuild preprocessor: {exc2}")
         
