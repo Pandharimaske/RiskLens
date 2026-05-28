@@ -330,6 +330,10 @@ jobs:
     
     steps:
       - uses: actions/checkout@v5
+
+      - name: Normalize image reference
+        run: |
+          echo "IMAGE_REF=$(printf '%s/%s:latest' '${{ env.REGISTRY }}' '${{ env.IMAGE_NAME }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_ENV"
       
       - name: Deployment notification
         run: |
@@ -339,11 +343,11 @@ jobs:
       
       - name: Pull latest image
         run: |
-          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          docker pull "$IMAGE_REF"
       
       - name: Verify image integrity
         run: |
-          docker inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest | grep -q '"Id"' && echo "✓ Image verified"
+          docker inspect "$IMAGE_REF" | grep -q '"Id"' && echo "✓ Image verified"
       
       - name: Create deployment report
         run: |
@@ -353,7 +357,7 @@ jobs:
           Date: $(date -u +'%Y-%m-%dT%H:%M:%SZ')
           Commit: ${{ github.sha }}
           Branch: ${{ github.ref_name }}
-          Image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          Image: $IMAGE_REF
           Status: Ready for deployment
           
           Checks Completed:
