@@ -1,11 +1,11 @@
-# Render service definition template
+# Render service definition template for the static frontend.
 # Update service name, region, and environment variables as needed.
 services:
   - type: web
-    name: risklens-streamlit
+    name: risklens-frontend
     env: docker
     plan: free
-    dockerfilePath: Dockerfile.streamlit
+    dockerfilePath: Dockerfile.frontend
     buildCommand: ""
     startCommand: ""
     envVars: []

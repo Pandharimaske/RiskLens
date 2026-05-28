@@ -1,5 +1,6 @@
 const form = document.getElementById('predict-form');
 const resultDiv = document.getElementById('result');
+const API_BASE_URL = 'https://risklens-erez.onrender.com';
 
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -17,7 +18,7 @@ form.addEventListener('submit', async (e) => {
   payload.vintage = Number(payload.vintage);
 
   try {
-    const resp = await fetch('/predict', {
+    const resp = await fetch(`${API_BASE_URL}/predict`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify(payload)
