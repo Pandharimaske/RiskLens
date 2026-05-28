@@ -69,6 +69,45 @@ def load_model():
             with open(PREPROCESSOR_PATH, 'rb') as f:
                 preprocessor = pickle.load(f)
             logger.info(f"✓ Preprocessor loaded (pickle): {PREPROCESSOR_PATH}")
+
+        # Validate preprocessor compatibility. If incompatible, attempt to rebuild
+        try:
+            # Try to get feature names (will fail on older/newer incompatible objects)
+            _ = preprocessor.get_feature_names_out()
+        except Exception as exc:
+            logger.warning(f"Preprocessor compatibility check failed: {exc}")
+            # Attempt to rebuild preprocessor from processed training data
+            try:
+                logger.info("Attempting to rebuild preprocessor from data/processed/X_train.npy")
+                import numpy as _np
+                from sklearn.preprocessing import StandardScaler, OneHotEncoder
+                from sklearn.compose import ColumnTransformer
+
+                X_train_path = Path("data/processed/X_train.npy")
+                if X_train_path.exists():
+                    X_train = _np.load(X_train_path)
+                    n_cols = X_train.shape[1]
+                    # Heuristic: first 10 columns numeric, rest categorical (as used in training)
+                    num_feats = list(range(min(10, n_cols)))
+                    cat_feats = list(range(min(10, n_cols), n_cols))
+
+                    new_preprocessor = ColumnTransformer(
+                        transformers=[
+                            ('num', StandardScaler(), num_feats),
+                            ('cat', OneHotEncoder(drop='first', sparse_output=False, handle_unknown='ignore'), cat_feats)
+                        ]
+                    )
+                    new_preprocessor.fit(X_train)
+                    # Save and replace
+                    joblib.dump(new_preprocessor, PREPROCESSOR_PATH)
+                    feature_names = list(new_preprocessor.get_feature_names_out())
+                    joblib.dump(feature_names, FEATURE_NAMES_PATH)
+                    preprocessor = new_preprocessor
+                    logger.info(f"✓ Rebuilt and saved preprocessor and feature names")
+                else:
+                    logger.error("Processed training data not found; cannot rebuild preprocessor")
+            except Exception as exc2:
+                logger.exception(f"Failed to rebuild preprocessor: {exc2}")
         
         try:
             feature_names = joblib.load(FEATURE_NAMES_PATH)
