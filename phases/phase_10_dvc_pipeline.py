@@ -10,6 +10,9 @@ Date: 2026-05-27
 import logging
 from pathlib import Path
 import yaml
+import sys
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from src import mlflow_config  # Setup MLflow for DagsHub or local
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

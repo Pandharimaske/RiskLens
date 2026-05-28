@@ -16,6 +16,9 @@ import joblib
 from pathlib import Path
 from sklearn.inspection import permutation_importance
 import warnings
+import sys
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from src import mlflow_config  # Setup MLflow for DagsHub or local
 
 warnings.filterwarnings('ignore')
 

@@ -1,7 +1,7 @@
 {
-  "timestamp": "2026-05-27T22:20:10.022240",
+  "timestamp": "2026-05-27T22:29:15.972601",
   "data_drift": {
-    "timestamp": "2026-05-27T22:20:09.539444",
+    "timestamp": "2026-05-27T22:29:15.522295",
     "total_features": 17,
     "features_with_drift": 0,
     "drift_details": {
@@ -144,7 +144,7 @@
     }
   },
   "prediction_drift": {
-    "timestamp": "2026-05-27T22:20:10.020649",
+    "timestamp": "2026-05-27T22:29:15.971633",
     "positive_class_rate_reference": 0.1225707138733885,
     "positive_class_rate_predictions": 0.0,
     "prediction_probability_mean": 0.1225416598655173,

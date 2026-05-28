@@ -24,7 +24,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, validator, ConfigDict
 import uvicorn
 
-from config import (
+from src.config import (
     HOST, PORT, WORKERS, DEBUG, MODEL_PATH, PREPROCESSOR_PATH, FEATURE_NAMES_PATH,
     DECISION_THRESHOLD, MAX_BATCH_SIZE, REQUEST_TIMEOUT, LOG_LEVEL,
     MODEL_VERSION, MODEL_NAME, CREATED_DATE, TRAINED_ON, API_VERSION

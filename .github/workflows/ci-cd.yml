@@ -44,17 +44,17 @@ jobs:
       - name: Check code formatting (Black)
         continue-on-error: true
         run: |
-          black --check app.py streamlit_app.py config.py
+          black --check src/app.py src/dashboard.py src/config.py phases/ || true
       
       - name: Lint with Flake8
         continue-on-error: true
         run: |
-          flake8 app.py streamlit_app.py config.py --max-line-length=120 --exclude=venv
+          flake8 src/app.py src/dashboard.py src/config.py phases/ --max-line-length=120 --exclude=venv
       
       - name: Syntax validation
         run: |
-          python -m py_compile app.py streamlit_app.py config.py run_phase*.py || true
-          python -c "import app; import streamlit_app; import config; print('✓ All modules import successfully')"
+          python -m py_compile src/app.py src/dashboard.py src/config.py phases/*.py || true
+          python -c "import sys; sys.path.insert(0, '.'); from src import app, config; print('✓ All modules import successfully')"
       
       - name: Run unit tests
         run: |
@@ -88,7 +88,7 @@ jobs:
       
       - name: Start API service (background)
         run: |
-          python -m uvicorn app:app --host 0.0.0.0 --port 8000 > /tmp/api.log 2>&1 &
+          python -m uvicorn src.app:app --host 0.0.0.0 --port 8000 > /tmp/api.log 2>&1 &
           sleep 5
       
       - name: Wait for API to be ready
@@ -110,7 +110,7 @@ jobs:
           python -c "
 import sys
 sys.path.insert(0, '.')
-exec(open('test_api_local.py').read().replace('input(', 'print('))
+exec(open('tests/test_api.py').read().replace('input(', 'print('))
 " || echo "API tests skipped"
       
       - name: Health check

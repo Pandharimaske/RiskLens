@@ -1,3 +1,6 @@
 
 [dvclive]
     reports = dvclive_reports
+
+[dvclive]
+    reports = dvclive_reports

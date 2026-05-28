@@ -14,6 +14,9 @@ import joblib
 from pathlib import Path
 from datetime import datetime, timedelta
 import json
+import sys
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from src import mlflow_config  # Setup MLflow for DagsHub or local
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
