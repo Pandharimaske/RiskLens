@@ -349,9 +349,9 @@ def prepare_features(data: Dict[str, Any]) -> np.ndarray:
         df['Premium_Bucket'] = df['Annual_Premium'].apply(premium_bucket)
         
         # 7. Damage history risk
+        df['Vehicle_Damage'] = df['Vehicle_Damage'].apply(normalize_vehicle_damage)
         df['Damage_History_Risk'] = (
-            df['Vehicle_Damage'].map({'Yes': 1, 'No': 0}) * 
-            (1 - df['Previously_Insured'])
+            df['Vehicle_Damage'] * (1 - df['Previously_Insured'])
         )
         
         # Now prepare the final feature set for the preprocessor
@@ -405,6 +405,21 @@ def normalize_vehicle_age(value: Any) -> float:
         if normalized in mapping:
             return mapping[normalized]
     raise ValueError(f"Invalid vehicle age value: {value}")
+
+
+def normalize_vehicle_damage(value: Any) -> int:
+    """Normalize vehicle damage to the numeric form expected by the persisted preprocessor."""
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized == 'yes':
+            return 1
+        if normalized == 'no':
+            return 0
+    if value in (1, True):
+        return 1
+    if value in (0, False):
+        return 0
+    raise ValueError(f"Invalid vehicle damage value: {value}")
 
 def make_prediction(X: np.ndarray) -> tuple:
     """
@@ -476,7 +491,7 @@ async def predict(request: PredictionRequest):
             'Region_Code': request.region_code,
             'Previously_Insured': request.previously_insured,
             'Vehicle_Age': normalize_vehicle_age(request.vehicle_age),
-            'Vehicle_Damage': request.vehicle_damage,
+            'Vehicle_Damage': normalize_vehicle_damage(request.vehicle_damage),
             'Annual_Premium': request.annual_premium,
             'Policy_Sales_Channel': request.policy_sales_channel,
             'Vintage': request.vintage
@@ -616,9 +631,9 @@ async def predict_batch(file: UploadFile = File(...)):
         df_engineered['Premium_Bucket'] = df_engineered['Annual_Premium'].apply(premium_bucket)
         
         # 7. Damage history risk
+        df_engineered['Vehicle_Damage'] = df_engineered['Vehicle_Damage'].apply(normalize_vehicle_damage)
         df_engineered['Damage_History_Risk'] = (
-            df_engineered['Vehicle_Damage'].map({'Yes': 1, 'No': 0}) * 
-            (1 - df_engineered['Previously_Insured'])
+            df_engineered['Vehicle_Damage'] * (1 - df_engineered['Previously_Insured'])
         )
 
         # Persisted preprocessing expects Gender as a numeric feature.
