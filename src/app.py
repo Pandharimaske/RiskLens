@@ -19,10 +19,11 @@ from contextlib import asynccontextmanager
 import numpy as np
 import pandas as pd
 import joblib
-from fastapi import FastAPI, HTTPException, File, UploadFile, status
+from fastapi import FastAPI, HTTPException, File, UploadFile, status, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field, validator, ConfigDict
+from pydantic import BaseModel, Field, validator, ConfigDict, ValidationError
+import re
 import uvicorn
 
 from src.config import (
@@ -469,7 +470,7 @@ async def get_model_info():
     )
 
 @app.post("/predict", response_model=PredictionResponse)
-async def predict(request: PredictionRequest):
+async def predict(request: Request):
     """
     Generate single prediction.
     
@@ -483,28 +484,55 @@ async def predict(request: PredictionRequest):
         )
     
     try:
-        # Prepare input
-        input_data = {
-            'Gender': normalize_gender(request.gender),
-            'Age': request.age,
-            'Driving_License': request.driving_license,
-            'Region_Code': request.region_code,
-            'Previously_Insured': request.previously_insured,
-            'Vehicle_Age': normalize_vehicle_age(request.vehicle_age),
-            'Vehicle_Damage': normalize_vehicle_damage(request.vehicle_damage),
-            'Annual_Premium': request.annual_premium,
-            'Policy_Sales_Channel': request.policy_sales_channel,
-            'Vintage': request.vintage
+        body = await request.json()
+
+        # Normalize incoming keys to snake_case so we accept mixed-case / camel/pascal keys
+        def to_snake(key: str) -> str:
+            s = key.strip().replace('-', '_').replace(' ', '_')
+            s = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', s)
+            s = re.sub('([a-z0-9])([A-Z])', r'\1_\2', s)
+            return s.lower()
+
+        expected = {
+            'id','gender','age','driving_license','region_code',
+            'previously_insured','vehicle_age','vehicle_damage',
+            'annual_premium','policy_sales_channel','vintage'
         }
-        
+
+        normalized_body = {}
+        for k, v in (body.items() if isinstance(body, dict) else []):
+            nk = to_snake(k)
+            if nk in expected:
+                normalized_body[nk] = v
+
+        # Validate using Pydantic model to reuse existing validators
+        try:
+            req = PredictionRequest.model_validate(normalized_body)
+        except ValidationError as ve:
+            raise HTTPException(status_code=400, detail=str(ve))
+
+        # Prepare input for feature pipeline (keep original casing expected by prepare_features)
+        input_data = {
+            'Gender': normalize_gender(req.gender),
+            'Age': req.age,
+            'Driving_License': req.driving_license,
+            'Region_Code': req.region_code,
+            'Previously_Insured': req.previously_insured,
+            'Vehicle_Age': req.vehicle_age,
+            'Vehicle_Damage': req.vehicle_damage,
+            'Annual_Premium': req.annual_premium,
+            'Policy_Sales_Channel': req.policy_sales_channel,
+            'Vintage': req.vintage
+        }
+
         # Preprocess and predict
         X = prepare_features(input_data)
         prob, pred = make_prediction(X)
-        
-        logger.info(f"Prediction for {request.id}: prob={prob:.4f}, pred={pred}")
-        
+
+        logger.info(f"Prediction for {req.id}: prob={prob:.4f}, pred={pred}")
+
         return PredictionResponse(
-            id=request.id,
+            id=req.id,
             probability=float(prob),
             prediction=int(pred),
             threshold=DECISION_THRESHOLD,
