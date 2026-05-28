@@ -390,6 +390,22 @@ def normalize_gender(value: Any) -> int:
         return 0
     raise ValueError(f"Invalid gender value: {value}")
 
+
+def normalize_vehicle_age(value: Any) -> float:
+    """Normalize vehicle age to the numeric form expected by the persisted preprocessor."""
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        normalized = value.strip()
+        mapping = {
+            "< 1 Year": 0.5,
+            "1-2 Year": 1.5,
+            "> 2 Years": 3.0,
+        }
+        if normalized in mapping:
+            return mapping[normalized]
+    raise ValueError(f"Invalid vehicle age value: {value}")
+
 def make_prediction(X: np.ndarray) -> tuple:
     """
     Generate prediction using calibrated model.
@@ -459,7 +475,7 @@ async def predict(request: PredictionRequest):
             'Driving_License': request.driving_license,
             'Region_Code': request.region_code,
             'Previously_Insured': request.previously_insured,
-            'Vehicle_Age': request.vehicle_age,
+            'Vehicle_Age': normalize_vehicle_age(request.vehicle_age),
             'Vehicle_Damage': request.vehicle_damage,
             'Annual_Premium': request.annual_premium,
             'Policy_Sales_Channel': request.policy_sales_channel,
@@ -608,6 +624,9 @@ async def predict_batch(file: UploadFile = File(...)):
         # Persisted preprocessing expects Gender as a numeric feature.
         if 'Gender' in df_engineered.columns:
             df_engineered['Gender'] = df_engineered['Gender'].apply(normalize_gender)
+
+        if 'Vehicle_Age' in df_engineered.columns:
+            df_engineered['Vehicle_Age'] = df_engineered['Vehicle_Age'].apply(normalize_vehicle_age)
         
         # Prepare all features in correct order
         all_features = [
