@@ -14,16 +14,18 @@ import io
 import csv
 from datetime import datetime
 from typing import List, Dict, Any, Optional
+from contextlib import asynccontextmanager
 
 import numpy as np
 import pandas as pd
+import joblib
 from fastapi import FastAPI, HTTPException, File, UploadFile, status
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, validator, ConfigDict
 import uvicorn
 
 from config import (
-    HOST, PORT, WORKERS, MODEL_PATH, PREPROCESSOR_PATH, FEATURE_NAMES_PATH,
+    HOST, PORT, WORKERS, DEBUG, MODEL_PATH, PREPROCESSOR_PATH, FEATURE_NAMES_PATH,
     DECISION_THRESHOLD, MAX_BATCH_SIZE, REQUEST_TIMEOUT, LOG_LEVEL,
     MODEL_VERSION, MODEL_NAME, CREATED_DATE, TRAINED_ON, API_VERSION
 )
@@ -45,21 +47,37 @@ preprocessor = None
 feature_names = None
 
 def load_model():
-    """Load calibrated model, preprocessor, and feature names."""
+    """Load calibrated model, preprocessor, and feature names using joblib."""
     global model, preprocessor, feature_names
     
     try:
-        with open(MODEL_PATH, 'rb') as f:
-            model = pickle.load(f)
-        logger.info(f"✓ Model loaded: {MODEL_PATH}")
+        # Try joblib first (more robust), fallback to pickle
+        try:
+            model = joblib.load(MODEL_PATH)
+            logger.info(f"✓ Model loaded (joblib): {MODEL_PATH}")
+        except Exception as e:
+            logger.warning(f"Joblib load failed, trying pickle: {e}")
+            with open(MODEL_PATH, 'rb') as f:
+                model = pickle.load(f)
+            logger.info(f"✓ Model loaded (pickle): {MODEL_PATH}")
         
-        with open(PREPROCESSOR_PATH, 'rb') as f:
-            preprocessor = pickle.load(f)
-        logger.info(f"✓ Preprocessor loaded: {PREPROCESSOR_PATH}")
+        try:
+            preprocessor = joblib.load(PREPROCESSOR_PATH)
+            logger.info(f"✓ Preprocessor loaded (joblib): {PREPROCESSOR_PATH}")
+        except Exception as e:
+            logger.warning(f"Joblib load failed, trying pickle: {e}")
+            with open(PREPROCESSOR_PATH, 'rb') as f:
+                preprocessor = pickle.load(f)
+            logger.info(f"✓ Preprocessor loaded (pickle): {PREPROCESSOR_PATH}")
         
-        with open(FEATURE_NAMES_PATH, 'rb') as f:
-            feature_names = pickle.load(f)
-        logger.info(f"✓ Feature names loaded: {FEATURE_NAMES_PATH}")
+        try:
+            feature_names = joblib.load(FEATURE_NAMES_PATH)
+            logger.info(f"✓ Feature names loaded (joblib): {FEATURE_NAMES_PATH}")
+        except Exception as e:
+            logger.warning(f"Joblib load failed, trying pickle: {e}")
+            with open(FEATURE_NAMES_PATH, 'rb') as f:
+                feature_names = pickle.load(f)
+            logger.info(f"✓ Feature names loaded (pickle): {FEATURE_NAMES_PATH}")
         
     except FileNotFoundError as e:
         logger.error(f"Model file not found: {e}")
@@ -69,12 +87,27 @@ def load_model():
         raise RuntimeError(f"Unexpected error loading model: {e}")
 
 # ============================================================================
+# MODEL LOADING LIFESPAN
+# ============================================================================
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage application lifecycle - load model on startup, cleanup on shutdown."""
+    # Startup
+    logger.info("Starting RiskLens API...")
+    load_model()
+    logger.info("✓ API startup complete")
+    yield
+    # Shutdown
+    logger.info("Shutting down RiskLens API...")
+
+# ============================================================================
 # FASTAPI APP INITIALIZATION
 # ============================================================================
 app = FastAPI(
     title=MODEL_NAME,
     description="REST API for vehicle insurance claim prediction",
-    version=API_VERSION
+    version=API_VERSION,
+    lifespan=lifespan
 )
 
 # ============================================================================
@@ -82,19 +115,7 @@ app = FastAPI(
 # ============================================================================
 class PredictionRequest(BaseModel):
     """Single prediction request schema."""
-    id: str = Field(..., description="Customer ID")
-    gender: str = Field(..., description="Male/Female")
-    age: int = Field(..., ge=18, le=150, description="Customer age")
-    driving_license: int = Field(..., ge=0, le=1, description="Has driving license")
-    region_code: int = Field(..., ge=0, description="Region code")
-    previously_insured: int = Field(..., ge=0, le=1, description="Previously insured")
-    vehicle_age: str = Field(..., description="Vehicle age category")
-    vehicle_damage: str = Field(..., description="Vehicle damage history")
-    annual_premium: float = Field(..., gt=0, description="Annual premium amount")
-    policy_sales_channel: int = Field(..., ge=0, description="Sales channel")
-    vintage: int = Field(..., ge=0, description="Days as customer")
-    
-    class Config:
+    model_config = ConfigDict(
         json_schema_extra = {
             "example": {
                 "id": "CUST_001",
@@ -110,6 +131,19 @@ class PredictionRequest(BaseModel):
                 "vintage": 200
             }
         }
+    )
+    
+    id: str = Field(..., description="Customer ID")
+    gender: str = Field(..., description="Male/Female")
+    age: int = Field(..., ge=18, le=150, description="Customer age")
+    driving_license: int = Field(..., ge=0, le=1, description="Has driving license")
+    region_code: int = Field(..., ge=0, description="Region code")
+    previously_insured: int = Field(..., ge=0, le=1, description="Previously insured")
+    vehicle_age: str = Field(..., description="Vehicle age category")
+    vehicle_damage: str = Field(..., description="Vehicle damage history")
+    annual_premium: float = Field(..., gt=0, description="Annual premium amount")
+    policy_sales_channel: int = Field(..., ge=0, description="Sales channel")
+    vintage: int = Field(..., ge=0, description="Days as customer")
 
 class PredictionResponse(BaseModel):
     """Single prediction response schema."""
@@ -154,13 +188,90 @@ def prepare_features(data: Dict[str, Any]) -> np.ndarray:
         # Create DataFrame with single row
         df = pd.DataFrame([data])
         
-        # Reorder columns to match training order
-        df = df[['Gender', 'Age', 'Driving_License', 'Region_Code', 
-                 'Previously_Insured', 'Vehicle_Age', 'Vehicle_Damage', 
-                 'Annual_Premium', 'Policy_Sales_Channel', 'Vintage']]
+        # Apply feature engineering (same as training pipeline)
+        # 1. Vehicle Age as numeric
+        vehicle_age_mapping = {
+            "< 1 Year": 0.5,
+            "1-2 Year": 1.5,
+            "> 2 Years": 3
+        }
+        df['Vehicle_Age_Numeric'] = df['Vehicle_Age'].map(vehicle_age_mapping)
+        
+        # 2. Premium per vehicle year
+        df['Premium_per_Vehicle_Year'] = (
+            df['Annual_Premium'] / (df['Vehicle_Age_Numeric'] + 1)
+        )
+        
+        # 3. High-value vehicle flag (using 75th percentile - from training)
+        # Approximate 75th percentile from training data
+        premium_75th = 40000  # Estimated from training data
+        df['High_Value_Vehicle'] = (
+            df['Annual_Premium'] > premium_75th
+        ).astype(int)
+        
+        # 4. Age risk bucket
+        def age_risk_bucket(age):
+            if age < 25:
+                return 'very_high_risk'
+            elif age < 35:
+                return 'high_risk'
+            elif age < 50:
+                return 'medium_risk'
+            elif age < 65:
+                return 'low_risk'
+            else:
+                return 'very_low_risk'
+        
+        df['Age_Risk_Bucket'] = df['Age'].apply(age_risk_bucket)
+        
+        # 5. Customer tenure segments
+        def tenure_segment(vintage):
+            if vintage < 30:
+                return 'new_customer'
+            elif vintage < 90:
+                return 'growing_customer'
+            elif vintage < 365:
+                return 'established_customer'
+            else:
+                return 'loyal_customer'
+        
+        df['Customer_Tenure_Segment'] = df['Vintage'].apply(tenure_segment)
+        
+        # 6. Premium bucket (using training data quantiles)
+        def premium_bucket(premium):
+            # Approximate quantiles from training: 25%=18000, 50%=31000, 75%=40000
+            if premium < 18000:
+                return 'low_premium'
+            elif premium < 31000:
+                return 'medium_premium'
+            elif premium < 40000:
+                return 'high_premium'
+            else:
+                return 'very_high_premium'
+        
+        df['Premium_Bucket'] = df['Annual_Premium'].apply(premium_bucket)
+        
+        # 7. Damage history risk
+        df['Damage_History_Risk'] = (
+            df['Vehicle_Damage'].map({'Yes': 1, 'No': 0}) * 
+            (1 - df['Previously_Insured'])
+        )
+        
+        # Now prepare the final feature set for the preprocessor
+        # Order matters! Must match training order
+        all_features = [
+            'Gender', 'Age', 'Driving_License', 'Region_Code',
+            'Previously_Insured', 'Vehicle_Age', 'Vehicle_Damage',
+            'Annual_Premium', 'Policy_Sales_Channel', 'Vintage',
+            'Vehicle_Age_Numeric', 'Premium_per_Vehicle_Year',
+            'High_Value_Vehicle', 'Age_Risk_Bucket', 'Customer_Tenure_Segment',
+            'Premium_Bucket', 'Damage_History_Risk'
+        ]
+        
+        df_features = df[all_features].copy()
         
         # Apply preprocessor
-        X = preprocessor.transform(df)
+        X = preprocessor.transform(df_features)
         
         return X
     except Exception as e:
@@ -189,12 +300,7 @@ def make_prediction(X: np.ndarray) -> tuple:
 # API ENDPOINTS
 # ============================================================================
 
-@app.on_event("startup")
-async def startup_event():
-    """Load model on startup."""
-    logger.info("Starting RiskLens API...")
-    load_model()
-    logger.info("✓ API startup complete")
+
 
 @app.get("/health", response_model=HealthResponse)
 async def health_check():
@@ -288,6 +394,27 @@ async def predict_batch(file: UploadFile = File(...)):
         contents = await file.read()
         df = pd.read_csv(io.StringIO(contents.decode('utf-8')))
         
+        # Normalize column names to title case for consistency
+        df.columns = df.columns.str.strip()  # Remove leading/trailing whitespace
+        
+        # Map common variations to standard names
+        column_mapping = {
+            'id': 'id', 'ID': 'id',
+            'gender': 'Gender', 'Gender': 'Gender', 'GENDER': 'Gender',
+            'age': 'Age', 'Age': 'Age', 'AGE': 'Age',
+            'driving_license': 'Driving_License', 'Driving_License': 'Driving_License',
+            'region_code': 'Region_Code', 'Region_Code': 'Region_Code',
+            'previously_insured': 'Previously_Insured', 'Previously_Insured': 'Previously_Insured',
+            'vehicle_age': 'Vehicle_Age', 'Vehicle_Age': 'Vehicle_Age',
+            'vehicle_damage': 'Vehicle_Damage', 'Vehicle_Damage': 'Vehicle_Damage',
+            'annual_premium': 'Annual_Premium', 'Annual_Premium': 'Annual_Premium',
+            'policy_sales_channel': 'Policy_Sales_Channel', 'Policy_Sales_Channel': 'Policy_Sales_Channel',
+            'vintage': 'Vintage', 'Vintage': 'Vintage'
+        }
+        
+        # Rename columns
+        df.rename(columns=column_mapping, inplace=True)
+        
         # Validate size
         if len(df) > MAX_BATCH_SIZE:
             raise HTTPException(
@@ -297,10 +424,86 @@ async def predict_batch(file: UploadFile = File(...)):
         
         logger.info(f"Processing batch with {len(df)} records")
         
-        # Prepare all features
-        df_features = df[['Gender', 'Age', 'Driving_License', 'Region_Code',
-                          'Previously_Insured', 'Vehicle_Age', 'Vehicle_Damage',
-                          'Annual_Premium', 'Policy_Sales_Channel', 'Vintage']].copy()
+        # Apply feature engineering to batch
+        df_engineered = df.copy()
+        
+        # 1. Vehicle Age as numeric
+        vehicle_age_mapping = {
+            "< 1 Year": 0.5,
+            "1-2 Year": 1.5,
+            "> 2 Years": 3
+        }
+        df_engineered['Vehicle_Age_Numeric'] = df_engineered['Vehicle_Age'].map(vehicle_age_mapping)
+        
+        # 2. Premium per vehicle year
+        df_engineered['Premium_per_Vehicle_Year'] = (
+            df_engineered['Annual_Premium'] / (df_engineered['Vehicle_Age_Numeric'] + 1)
+        )
+        
+        # 3. High-value vehicle flag
+        premium_75th = 40000  # From training data
+        df_engineered['High_Value_Vehicle'] = (
+            df_engineered['Annual_Premium'] > premium_75th
+        ).astype(int)
+        
+        # 4. Age risk bucket
+        def age_risk_bucket(age):
+            if age < 25:
+                return 'very_high_risk'
+            elif age < 35:
+                return 'high_risk'
+            elif age < 50:
+                return 'medium_risk'
+            elif age < 65:
+                return 'low_risk'
+            else:
+                return 'very_low_risk'
+        
+        df_engineered['Age_Risk_Bucket'] = df_engineered['Age'].apply(age_risk_bucket)
+        
+        # 5. Customer tenure segments
+        def tenure_segment(vintage):
+            if vintage < 30:
+                return 'new_customer'
+            elif vintage < 90:
+                return 'growing_customer'
+            elif vintage < 365:
+                return 'established_customer'
+            else:
+                return 'loyal_customer'
+        
+        df_engineered['Customer_Tenure_Segment'] = df_engineered['Vintage'].apply(tenure_segment)
+        
+        # 6. Premium bucket
+        def premium_bucket(premium):
+            if premium < 18000:
+                return 'low_premium'
+            elif premium < 31000:
+                return 'medium_premium'
+            elif premium < 40000:
+                return 'high_premium'
+            else:
+                return 'very_high_premium'
+        
+        df_engineered['Premium_Bucket'] = df_engineered['Annual_Premium'].apply(premium_bucket)
+        
+        # 7. Damage history risk
+        df_engineered['Damage_History_Risk'] = (
+            df_engineered['Vehicle_Damage'].map({'Yes': 1, 'No': 0}) * 
+            (1 - df_engineered['Previously_Insured'])
+        )
+        
+        # Prepare all features in correct order
+        all_features = [
+            'Gender', 'Age', 'Driving_License', 'Region_Code',
+            'Previously_Insured', 'Vehicle_Age', 'Vehicle_Damage',
+            'Annual_Premium', 'Policy_Sales_Channel', 'Vintage',
+            'Vehicle_Age_Numeric', 'Premium_per_Vehicle_Year',
+            'High_Value_Vehicle', 'Age_Risk_Bucket', 'Customer_Tenure_Segment',
+            'Premium_Bucket', 'Damage_History_Risk'
+        ]
+        
+        df_features = df_engineered[all_features].copy()
         
         X = preprocessor.transform(df_features)
         
@@ -327,11 +530,14 @@ async def predict_batch(file: UploadFile = File(...)):
             "timestamp": datetime.utcnow().isoformat()
         }
     
-    except pd.errors.ParserError:
-        raise HTTPException(status_code=400, detail="Invalid CSV format")
+    except pd.errors.ParserError as e:
+        raise HTTPException(status_code=400, detail=f"Invalid CSV format: {str(e)}")
+    except KeyError as e:
+        logger.error(f"Missing required column: {e}")
+        raise HTTPException(status_code=400, detail=f"Missing required column: {str(e)}")
     except Exception as e:
         logger.error(f"Batch prediction error: {e}")
-        raise HTTPException(status_code=500, detail="Batch prediction failed")
+        raise HTTPException(status_code=500, detail=f"Batch prediction failed: {str(e)}")
 
 @app.get("/")
 async def root():
