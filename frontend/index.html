@@ -7,47 +7,164 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div class="container">
-    <h1>RiskLens - Insurance Risk Prediction</h1>
-    <form id="predict-form">
-      <div class="row">
-        <label>ID<input name="id" value="CUST_001" required></label>
-        <label>Gender
-          <select name="gender">
-            <option>Male</option>
-            <option>Female</option>
-          </select>
-        </label>
-        <label>Age<input type="number" name="age" value="35" min="18" max="120"></label>
+  <div class="shell">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">RiskLens Production Console</p>
+        <h1>Insurance risk prediction with single, batch, and service views</h1>
+        <p class="lede">Use the API-backed UI to score one customer, upload a CSV batch, and inspect live service health without leaving the page.</p>
       </div>
-
-      <div class="row">
-        <label>Driving License
-          <select name="driving_license"><option value="1">Yes</option><option value="0">No</option></select>
-        </label>
-        <label>Region Code<input type="number" name="region_code" value="28"></label>
-        <label>Previously Insured<select name="previously_insured"><option value="0">No</option><option value="1">Yes</option></select></label>
+      <div class="hero-stats">
+        <div class="stat-card">
+          <span class="stat-label">Backend</span>
+          <strong id="backend-status">Checking...</strong>
+          <small id="backend-status-detail">Connecting to API</small>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Decision threshold</span>
+          <strong id="threshold-value">0.0400</strong>
+          <small>Calibrated model</small>
+        </div>
       </div>
+    </header>
 
-      <div class="row">
-        <label>Vehicle Age
-          <select name="vehicle_age"><option>1-2 Year</option><option>&lt; 1 Year</option><option>&gt; 2 Years</option></select>
-        </label>
-        <label>Vehicle Damage
-          <select name="vehicle_damage"><option>No</option><option>Yes</option></select>
-        </label>
-        <label>Annual Premium<input type="number" name="annual_premium" value="40000"></label>
-      </div>
+    <nav class="tabs" aria-label="Prediction modes">
+      <button class="tab active" data-tab="single">Single prediction</button>
+      <button class="tab" data-tab="batch">Batch upload</button>
+      <button class="tab" data-tab="service">Service info</button>
+    </nav>
 
-      <div class="row">
-        <label>Policy Sales Channel<input type="number" name="policy_sales_channel" value="26"></label>
-        <label>Vintage (days)<input type="number" name="vintage" value="200"></label>
-      </div>
+    <main class="grid">
+      <section class="panel tab-panel active" id="single-panel">
+        <div class="panel-head">
+          <div>
+            <h2>Single prediction</h2>
+            <p>Score one customer and inspect the probability, class, and threshold.</p>
+          </div>
+        </div>
+        <form id="predict-form" class="form-grid">
+          <label>
+            Customer ID
+            <input name="id" value="CUST_001" required>
+          </label>
+          <label>
+            Gender
+            <select name="gender">
+              <option>Male</option>
+              <option>Female</option>
+            </select>
+          </label>
+          <label>
+            Age
+            <input type="number" name="age" value="35" min="18" max="120">
+          </label>
+          <label>
+            Driving License
+            <select name="driving_license">
+              <option value="1">Yes</option>
+              <option value="0">No</option>
+            </select>
+          </label>
+          <label>
+            Region Code
+            <input type="number" name="region_code" value="28">
+          </label>
+          <label>
+            Previously Insured
+            <select name="previously_insured">
+              <option value="0">No</option>
+              <option value="1">Yes</option>
+            </select>
+          </label>
+          <label>
+            Vehicle Age
+            <select name="vehicle_age">
+              <option>1-2 Year</option>
+              <option>&lt; 1 Year</option>
+              <option>&gt; 2 Years</option>
+            </select>
+          </label>
+          <label>
+            Vehicle Damage
+            <select name="vehicle_damage">
+              <option>No</option>
+              <option>Yes</option>
+            </select>
+          </label>
+          <label>
+            Annual Premium
+            <input type="number" name="annual_premium" value="40000">
+          </label>
+          <label>
+            Policy Sales Channel
+            <input type="number" name="policy_sales_channel" value="26">
+          </label>
+          <label>
+            Vintage (days)
+            <input type="number" name="vintage" value="200">
+          </label>
+          <div class="form-actions">
+            <button type="submit" class="primary">Predict customer</button>
+            <button type="button" id="fill-example" class="secondary">Load example</button>
+          </div>
+        </form>
+        <div id="result" class="result-card hidden"></div>
+      </section>
 
-      <button type="submit">Predict</button>
-    </form>
+      <section class="panel tab-panel" id="batch-panel">
+        <div class="panel-head">
+          <div>
+            <h2>Batch prediction</h2>
+            <p>Upload a CSV with the same columns as the single prediction form.</p>
+          </div>
+        </div>
+        <div class="batch-layout">
+          <div class="upload-card">
+            <label class="file-drop">
+              <input type="file" id="batch-file" accept=".csv,text/csv">
+              <span>Drop or choose a CSV file</span>
+              <small>Columns: id, gender, age, driving_license, region_code, previously_insured, vehicle_age, vehicle_damage, annual_premium, policy_sales_channel, vintage</small>
+            </label>
+            <div class="inline-actions">
+              <button type="button" id="run-batch" class="primary">Run batch prediction</button>
+              <button type="button" id="download-sample" class="secondary">Download sample CSV</button>
+            </div>
+          </div>
+          <div class="batch-summary">
+            <div class="summary-pill"><span>Rows</span><strong id="batch-rows">0</strong></div>
+            <div class="summary-pill"><span>Positive rate</span><strong id="batch-positive-rate">0%</strong></div>
+            <div class="summary-pill"><span>Highest risk</span><strong id="batch-top-risk">-</strong></div>
+          </div>
+        </div>
+        <div id="batch-result" class="table-wrap hidden"></div>
+      </section>
 
-    <div id="result" class="card hidden"></div>
+      <section class="panel tab-panel" id="service-panel">
+        <div class="panel-head">
+          <div>
+            <h2>Service information</h2>
+            <p>Quick checks for the deployed backend and model metadata.</p>
+          </div>
+        </div>
+        <div class="service-grid">
+          <button type="button" id="refresh-health" class="info-card clickable">
+            <span class="card-label">Health</span>
+            <strong id="health-value">Refresh</strong>
+            <small id="health-detail">Live API status</small>
+          </button>
+          <button type="button" id="refresh-model" class="info-card clickable">
+            <span class="card-label">Model info</span>
+            <strong id="model-name">Load model</strong>
+            <small id="model-detail">Version and threshold</small>
+          </button>
+          <a class="info-card link-card" href="https://risklens-erez.onrender.com/docs" target="_blank" rel="noreferrer">
+            <span class="card-label">Docs</span>
+            <strong>Open API docs</strong>
+            <small>/docs endpoint</small>
+          </a>
+        </div>
+      </section>
+    </main>
   </div>
   <script src="app.js"></script>
 </body>
