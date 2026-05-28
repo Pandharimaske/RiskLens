@@ -107,11 +107,7 @@ jobs:
       
       - name: Run API tests
         run: |
-          python -c "
-import sys
-sys.path.insert(0, '.')
-exec(open('tests/test_api.py').read().replace('input(', 'print('))
-" || echo "API tests skipped"
+          bash -lc 'python -c "import sys; sys.path.insert(0, \".\"); exec(open(\"tests/test_api.py\").read().replace(\"input(\", \"print(\")) )" || echo "API tests skipped"'
       
       - name: Health check
         run: |
