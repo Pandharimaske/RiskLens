@@ -375,6 +375,21 @@ def prepare_features(data: Dict[str, Any]) -> np.ndarray:
         logger.error(f"Feature preprocessing error: {e}")
         raise ValueError(f"Failed to preprocess features: {e}")
 
+
+def normalize_gender(value: Any) -> int:
+    """Normalize gender input to the numeric form expected by the persisted preprocessor."""
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized == "male":
+            return 1
+        if normalized == "female":
+            return 0
+    if value in (1, True):
+        return 1
+    if value in (0, False):
+        return 0
+    raise ValueError(f"Invalid gender value: {value}")
+
 def make_prediction(X: np.ndarray) -> tuple:
     """
     Generate prediction using calibrated model.
@@ -439,7 +454,7 @@ async def predict(request: PredictionRequest):
     try:
         # Prepare input
         input_data = {
-            'Gender': request.gender,
+            'Gender': normalize_gender(request.gender),
             'Age': request.age,
             'Driving_License': request.driving_license,
             'Region_Code': request.region_code,
@@ -589,6 +604,10 @@ async def predict_batch(file: UploadFile = File(...)):
             df_engineered['Vehicle_Damage'].map({'Yes': 1, 'No': 0}) * 
             (1 - df_engineered['Previously_Insured'])
         )
+
+        # Persisted preprocessing expects Gender as a numeric feature.
+        if 'Gender' in df_engineered.columns:
+            df_engineered['Gender'] = df_engineered['Gender'].apply(normalize_gender)
         
         # Prepare all features in correct order
         all_features = [
