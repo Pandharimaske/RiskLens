@@ -1,0 +1,14 @@
+artifact_uri: file:///Users/pandhari/Desktop/RiskLens/mlruns/283271864419959936/a32487a90cc741f2a5f8c47cce25b9cb/artifacts
+end_time: 1779945600523
+entry_point_name: ''
+experiment_id: '283271864419959936'
+lifecycle_stage: active
+run_id: a32487a90cc741f2a5f8c47cce25b9cb
+run_name: rf_model_comparison
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1779945593991
+status: 3
+tags: []
+user_id: pandhari

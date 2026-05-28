@@ -1,0 +1,10 @@
+artifact_location: file:///Users/pandhari/Desktop/RiskLens/mlruns/283271864419959936/models/m-c10ad6e16fc3482b82194dd81f983e32/artifacts
+creation_timestamp: 1779945598178
+experiment_id: '283271864419959936'
+last_updated_timestamp: 1779945600520
+model_id: m-c10ad6e16fc3482b82194dd81f983e32
+model_type: null
+name: model
+source_run_id: a32487a90cc741f2a5f8c47cce25b9cb
+status: 2
+status_message: null

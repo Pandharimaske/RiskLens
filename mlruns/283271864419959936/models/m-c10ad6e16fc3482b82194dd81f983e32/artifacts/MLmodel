@@ -1,0 +1,23 @@
+artifact_path: file:///Users/pandhari/Desktop/RiskLens/mlruns/283271864419959936/models/m-c10ad6e16fc3482b82194dd81f983e32/artifacts
+flavors:
+  python_function:
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.sklearn
+    model_path: model.pkl
+    predict_fn: predict
+    python_version: 3.12.7
+  sklearn:
+    code: null
+    pickled_model: model.pkl
+    serialization_format: cloudpickle
+    sklearn_version: 1.8.0
+    skops_trusted_types: null
+mlflow_version: 3.12.0
+model_id: m-c10ad6e16fc3482b82194dd81f983e32
+model_size_bytes: 6992326
+model_uuid: m-c10ad6e16fc3482b82194dd81f983e32
+prompts: null
+run_id: a32487a90cc741f2a5f8c47cce25b9cb
+utc_time_created: '2026-05-28 05:19:58.189558'
