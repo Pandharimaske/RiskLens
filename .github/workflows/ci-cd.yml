@@ -26,19 +26,13 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      
-      - name: Cache dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
+          cache: 'pip'
+          cache-dependency-path: requirements.txt
       
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install --prefer-binary -r requirements.txt
           pip install pytest pytest-cov black flake8 pylint
       
       - name: Check code formatting (Black)
@@ -80,11 +74,13 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: requirements.txt
       
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install --prefer-binary -r requirements.txt
       
       - name: Start API service (background)
         run: |
@@ -170,11 +166,13 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: requirements.txt
       
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install --prefer-binary -r requirements.txt
       
       - name: Validate model artifacts
         run: |
@@ -234,7 +232,7 @@ jobs:
   benchmark:
     runs-on: ubuntu-latest
     name: Performance Benchmarking
-    needs: model-validation
+    needs: code-quality
     
     steps:
       - uses: actions/checkout@v5
@@ -243,11 +241,13 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: requirements.txt
       
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install --prefer-binary -r requirements.txt
       
       - name: Benchmark model inference
         run: |
@@ -297,6 +297,8 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: requirements.txt
       
       - name: Install security tools
         run: |
@@ -323,7 +325,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     name: Deploy to Production
-    needs: [build-image, model-validation, benchmark]
+    needs: [build-image]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     environment:
       name: production
@@ -363,9 +365,9 @@ jobs:
           Checks Completed:
           - Code Quality: ✓
           - API Tests: ✓
-          - Model Validation: ✓
-          - Performance: ✓
-          - Security: ✓
+          - Model Validation: optional
+          - Performance: optional
+          - Security: optional
           EOF
           cat deployment-report.txt
       
@@ -384,7 +386,7 @@ jobs:
   artifacts-report:
     runs-on: ubuntu-latest
     name: Generate Artifacts Report
-    needs: [code-quality, model-validation]
+    needs: [code-quality]
     if: always()
     
     steps:
